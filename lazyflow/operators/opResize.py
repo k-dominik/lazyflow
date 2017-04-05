@@ -39,7 +39,8 @@ class OpResize5D( Operator ):
     """
     Input = InputSlot()
     ResizedShape = InputSlot()
-    
+    SplineOrder = InputSlot(value=3)
+
     Output = OutputSlot()
 
     def __init__(self, *args, **kwargs):
@@ -103,16 +104,26 @@ class OpResize5D( Operator ):
             result_step = result[t][squeezed_slicing]
             # vigra assumes wrong axis order if we don't specify one explicitly here...
             result_step = vigra.taggedView( result_step, step_input_squeezed.axistags )
-            
+
+            order = self.SplineOrder.value
+
             if self.Input.meta.dtype == numpy.float32:
-                vigra.sampling.resize( step_input_squeezed, out=result_step )
+                vigra.sampling.resize(
+                    step_input_squeezed,
+                    order=order,
+                    out=result_step,
+                )
             else:
                 step_input_squeezed = step_input_squeezed.astype( numpy.float32 )
-                result_float = vigra.sampling.resize(step_input_squeezed, shape=result_step.shape[:-1])
+                result_float = vigra.sampling.resize(
+                    step_input_squeezed,
+                    order=order,
+                    shape=result_step.shape[:-1]
+                )
                 result_step[:] = result_float.round()
 
         # FIXME: Progress here will not be correct for multiple threads.
-        self.progressSignal(0)        
+        self.progressSignal(0)
 
         # FIXME: request pool...
         for t in range( t_start, t_stop ):
@@ -140,6 +151,7 @@ class OpResize5D( Operator ):
 class OpResize(Operator):
     Input = InputSlot()
     ResizedShape = InputSlot()
+    SplineOrder = InputSlot(value=3)
     
     Output = OutputSlot()
     
@@ -151,6 +163,7 @@ class OpResize(Operator):
         
         self._opResize5D = OpResize5D( parent=self )
         self._opResize5D.Input.connect( self._op5_in.Output )
+        self._opResize5D.SplineOrder.connect( self.SplineOrder )
         # ResizedShape is configured below (must be reordered for 5D)
         
         self._op5_out = OpReorderAxes( parent=self )

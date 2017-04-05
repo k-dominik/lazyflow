@@ -1,3 +1,5 @@
+from __future__ import division
+
 import numpy
 import vigra
 
@@ -119,6 +121,52 @@ class TestOpResize(object):
         assert abs(resized_data[0, 0, 32, 48, 1] - 0.5) < 0.1
         assert abs(resized_data[1, 16, 48, 24, 2] - 1.0) < 0.1
 
+    def testSplineOrder(self):
+        graph = Graph()
+
+        data = numpy.zeros((5, 16, 64, 64, 3), dtype=numpy.float32)
+        peak1 = numpy.array([0, 7, 16, 48, 1])
+        data[tuple(peak1)] = 1.0
+        peak2 = numpy.array([1, 8, 24, 24, 2])
+        data[tuple(peak2)] = 1.0
+        datav = vigra.taggedView(data, 'tzyxc')
+        # data[0] = vigra.filters.gaussianSmoothing(data[0], sigma=5.0)
+        # data[1] = vigra.filters.gaussianSmoothing(data[1], sigma=5.0)
+        # data *= (1.0 / data.max())
+        resized_shape = (5, 16, 64, 32, 3)
+        resize_factors = numpy.array(resized_shape) / numpy.array(data.shape)
+
+        def get_outside_mask(resized_shape, resize_factors, center, spline_radius):
+            expected_radius = resize_factors * spline_radius
+            z, y, x = numpy.ogrid[
+                -center[1]:(resized_shape[1] - center[1]),
+                -center[2]:(resized_shape[2] - center[2]),
+                -center[3]:(resized_shape[3] - center[3])
+            ]
+            outside_indices = ((
+                (z ** 2) / (expected_radius[1] ** 2) +
+                (y ** 2) / (expected_radius[2] ** 2) +
+                (x ** 2) / (expected_radius[3] ** 2)) > 1
+            )
+            return outside_indices
+
+        # this works because in this all coordinates are even numbers and only the
+        # z-dimension is changed in size: / 2
+        peak1_resized = (peak1 * resize_factors).astype(int)
+        peak2_resized = (peak2 * resize_factors).astype(int)
+        for order in xrange(2, 6):
+            op = OpResize(graph=graph)
+            op.SplineOrder.setValue(order)
+            op.Input.setValue(datav)
+            op.ResizedShape.setValue(resized_shape)
+            resized_data = op.Output[:].wait()
+            # Did our two high points remain?
+            assert resized_data[tuple(peak1_resized)] == resized_data[0, :, :, :, 1].max()
+            assert resized_data[tuple(peak2_resized)] == resized_data[1, :, :, :, 2].max()
+
+            # is everything outside the expected area (all voxels)
+            # more or less trivial: time slices 2 - 4
+            numpy.testing.assert_allclose(resized_data[2::, ...], 0)
 
 if __name__ == "__main__":
     import sys
