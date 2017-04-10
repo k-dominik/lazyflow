@@ -22,6 +22,9 @@
 from __future__ import division
 import copy
 import collections
+import itertools
+from functools import partial
+import threading
 
 import numpy
 import vigra
@@ -30,6 +33,8 @@ from lazyflow.graph import Operator, InputSlot, OutputSlot
 from .opReorderAxes import OpReorderAxes
 from lazyflow.utility import OrderedSignal
 from lazyflow.roi import enlargeRoiForHalo
+from lazyflow.request import Request, RequestPool
+
 
 class OpResize5D( Operator ):
     """
@@ -137,14 +142,26 @@ class OpResize5D( Operator ):
                 )
                 result_step[:] = result_float.round()
 
-        # FIXME: Progress here will not be correct for multiple threads.
+        lock = threading.Lock()
+        counter = itertools.count()
+        n_timesteps = (t_stop - t_start)
+
+        def handle_timeslice_finished(request, result):
+            with lock:
+                tmp = counter.next()
+            progress = 100 * tmp / n_timesteps
+            self.progressSignal(int(progress))
+
         self.progressSignal(0)
 
-        # FIXME: request pool...
-        for t in range( t_start, t_stop ):
-            process_timestep( t )
-            progress = 100*(t-t_start)//(t_stop-t_start)
-            self.progressSignal( int(progress) )
+        pool = RequestPool()
+        for t in xrange(t_start, t_stop):
+            req = Request(partial(process_timestep, t))
+            req.notify_finished(partial(handle_timeslice_finished, req))
+            pool.add(req)
+            del req  # is this really necessary? seen in _impl_test_pool_results_discarded
+
+        pool.wait()
         self.progressSignal(100)
 
         return result
