@@ -29,6 +29,7 @@ import vigra
 from lazyflow.graph import Operator, InputSlot, OutputSlot
 from .opReorderAxes import OpReorderAxes
 from lazyflow.utility import OrderedSignal
+from lazyflow.roi import enlargeRoiForHalo
 
 class OpResize5D( Operator ):
     """
@@ -83,12 +84,26 @@ class OpResize5D( Operator ):
 
         t_start = output_roi[0][0]
         t_stop = output_roi[1][0]
-        
+
         def process_timestep( t ):
-            # Request input and resize it.            
-            # FIXME: This is not quite correct.  We should request a halo that is wide enough 
-            #        for the BSpline used by resize(). See vigra docs for BSlineBase.radius()        
+            # Request input and resize it.
+            # for halo: BSlineBase.radius() = (splineOrder + 1) / 2
+            image_shape = self.Input.meta.shape
+            spacial_shape = image_shape[1:-1]
             step_input_roi = copy.copy(input_roi)
+            spacial_start = step_input_roi[0][1:-1]
+            spacial_end = step_input_roi[1][1:-1]
+            enlarged_spatial_roi = enlargeRoiForHalo(
+                start=spacial_start,
+                stop=spacial_end,
+                shape=spacial_shape,
+                sigma=(self.SplineOrder.value + 1) / 2,
+                window=1  # dummy value; to get the correct halo size for spline interpolation
+            )
+
+            step_input_roi[0][1:-1] = enlarged_spatial_roi[0]
+            step_input_roi[1][1:-1] = enlarged_spatial_roi[1]
+
             step_input_roi[0][0] = t
             step_input_roi[1][0] = t+1
 
