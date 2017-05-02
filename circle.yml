@@ -45,4 +45,4 @@ dependencies:
 test:
   override:
     # - cd ${TEST_ENV_PREFIX}/ilastik-meta/lazyflow/tests && ${TEST_ENV_PREFIX}/bin/nosetests --nologcapture --ignore-files=testInterpolatedFeatures.py .
-    - cd ${TEST_ENV_PREFIX}/ilastik-meta/lazyflow && flake8 --output-file=flake8.out.txt lazyflow
+    - cd ${TEST_ENV_PREFIX}/ilastik-meta/lazyflow && flake8 --tee --output-file=flake8.out.txt lazyflow
