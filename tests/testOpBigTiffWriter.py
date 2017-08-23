@@ -42,7 +42,8 @@ class TestOpBigTiffWriter(unittest.TestCase):
         # Todo: python3 f"formatstring"
         cls.test_file_name = "{}/bigtiff_testfile.tif".format(cls.tmp_data_folder)
 
-        cls.data = numpy.random.randint(0, 255, (800, 1200)).astype('uint8')
+        cls.data = numpy.random.randint(0, 255, (512, 1024)).astype('uint8')
+        cls.data[10:100, 10:100] = 0
         cls.dataShape = cls.data.shape
         cls.testData = vigra.VigraArray(
             cls.dataShape,
@@ -53,14 +54,14 @@ class TestOpBigTiffWriter(unittest.TestCase):
         # Will do binary comparison with this file:
         try:
             t = pytiff.Tiff(cls.test_file_name, file_mode='w', bigtiff=True)
-            t.write(cls.data)
+            t.write(cls.data, tile_width=256, tile_length=256)
         finally:
             t.close()
 
     @classmethod
     def teardownClass(cls):
         print(cls.tmp_data_folder)
-        # shutil.rmtree(cls.tmp_data_folder)
+        shutil.rmtree(cls.tmp_data_folder)
 
     def test_small_file_writing(self):
         """Test if bigtiff can be written with a small dataset"""
@@ -78,6 +79,12 @@ class TestOpBigTiffWriter(unittest.TestCase):
         opWriter.WriteImage[:].wait()
 
         self.assertTrue(os.path.exists(out_file_name))
+
+        t = pytiff.Tiff(out_file_name, 'r')
+
+        read_data = t[:]
+
+        numpy.testing.assert_array_equal(read_data, self.data)
 
         self.assertTrue(filecmp.cmp(out_file_name, self.test_file_name))
 
