@@ -23,6 +23,17 @@
 import numpy
 from lazyflow.graph import Operator, InputSlot, OutputSlot
 from lazyflow.roi import roiFromShape, roiToSlice
+import time
+
+import threading
+import sys
+import inspect
+
+def write_lineno(description='', output=sys.stdout):
+    """Returns the current line number in our program."""
+    line_number = inspect.currentframe().f_back.f_lineno
+    output.write(f"{description}.{__file__} {line_number} ...\n")
+
 
 class OpCacheFixer(Operator):
     """
@@ -58,8 +69,11 @@ class OpCacheFixer(Operator):
             # The downstream user doesn't know he's getting fake data.
             # When we become "unfixed", we need to tell him.
             self._expand_fixed_dirty_roi( (roi.start, roi.stop) )
+            write_lineno(f'[{threading.current_thread()}]execute 1-')
+            time.sleep(0.001)
             result[:] = 0
         else:
+            write_lineno(f'[{threading.current_thread()}]execute 2')
             self.Input(roi.start, roi.stop).writeInto(result).wait()
         
     def setInSlot(self, slot, subindex, roi, value):
@@ -76,8 +90,11 @@ class OpCacheFixer(Operator):
             # If we're becoming UN-fixed, send out a big dirty notification
             if ( self._fixed and not self.fixAtCurrent.value and
                  self._fixed_dirty_roi and (self._fixed_dirty_roi[1] - self._fixed_dirty_roi[0] > 0).all() ):
+                write_lineno('propagateDirty, setting dirty')
                 self.Output.setDirty( *self._fixed_dirty_roi )
+
                 self._fixed_dirty_roi = None
+            write_lineno('propagateDirty, setting _fixed')
             self._fixed = self.fixAtCurrent.value
         elif slot is self.Input:
             if self._fixed:

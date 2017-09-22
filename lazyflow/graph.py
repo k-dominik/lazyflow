@@ -80,6 +80,16 @@ from lazyflow.operator import Operator, InputDict, OutputDict, OperatorMetaClass
 from lazyflow.operatorWrapper import OperatorWrapper
 from lazyflow.metaDict import MetaDict
 
+
+import sys
+import inspect
+
+def write_lineno(description='', output=sys.stdout):
+    """Returns the current line number in our program."""
+    line_number = inspect.currentframe().f_back.f_lineno
+    output.write(f"{description}.{__file__} {line_number} ...\n")
+
+
 class Graph(object):
     """
     A Graph instance is shared by all connected operators and contains any 
@@ -88,7 +98,8 @@ class Graph(object):
     def __init__(self):
         self._setup_depth = 0
         self._sig_setup_complete = None
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
+        self._condition = threading.Condition(self._lock)
 
     def call_when_setup_finished(self, fn):
         # The graph is considered in "setup" mode if any slot is executing a function that affects the state of the graph.
@@ -119,19 +130,29 @@ class Graph(object):
             
         def __enter__(self):
             if self._graph:
-                with self._graph._lock:
-                    if self._graph._setup_depth == 0:
-                        self._graph._sig_setup_complete = OrderedSignal()
-                    self._graph._setup_depth += 1
+                self._graph._lock.acquire()
+                if self._graph._setup_depth == 0:
+                    self._graph._sig_setup_complete = OrderedSignal()
+                write_lineno(
+                    f'SetupDepthContext incrementing from '
+                    f'{self._graph._setup_depth} to {self._graph._setup_depth + 1}')
+                write_lineno(f'SetupContext stack {inspect.stack()[2]}')
+                self._graph._setup_depth += 1
+                print(self._graph._lock)
+
 
         def __exit__(self, *args):
             if self._graph:
                 sig_setup_complete = None
-                with self._graph._lock:
-                    self._graph._setup_depth -= 1
-                    if self._graph._setup_depth == 0:
-                        sig_setup_complete = self._graph._sig_setup_complete
-                        # Reset.
-                        self._graph._sig_setup_complete = None
+
+                write_lineno(
+                    f'SetupDepthContext decrementing from '
+                    f'{self._graph._setup_depth} to {self._graph._setup_depth - 1}')
+                self._graph._setup_depth -= 1
+                if self._graph._setup_depth == 0:
+                    sig_setup_complete = self._graph._sig_setup_complete
+                    # Reset.
+                    self._graph._sig_setup_complete = None
+                self._graph._lock.release()
                 if sig_setup_complete:
                     sig_setup_complete()

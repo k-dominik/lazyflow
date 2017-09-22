@@ -36,6 +36,15 @@ import psutil
 from lazyflow.utility.priorityQueue import PriorityQueue
 
 
+import sys
+import inspect
+
+def write_lineno(description='', output=sys.stdout):
+    """Returns the current line number in our program."""
+    line_number = inspect.currentframe().f_back.f_lineno
+    output.write(f"{description}.{__file__} {line_number} ...\n")
+
+
 class ThreadPool(object):
     """
     Manages a set of worker threads and dispatches tasks to them.

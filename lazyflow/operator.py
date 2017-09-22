@@ -220,7 +220,7 @@ class Operator(with_metaclass(OperatorMetaClass, object)):
 
         self._initialized = False
 
-        self._condition = threading.Condition()
+        self._condition = graph._condition
         self._executionCount = 0
         self._settingUp = False
 

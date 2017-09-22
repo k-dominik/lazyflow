@@ -49,6 +49,16 @@ from lazyflow.stype import ArrayLike
 from lazyflow.metaDict import MetaDict
 from lazyflow.utility import slicingtools, OrderedSignal
 
+
+import sys
+import inspect
+
+def write_lineno(description='', output=sys.stdout):
+    """Returns the current line number in our program."""
+    line_number = inspect.currentframe().f_back.f_lineno
+    output.write(f"{description}.{__file__} {line_number} ...\n")
+
+
 class ValueRequest(object):
     """Pseudo request that behaves like a request.Request object.
 
@@ -240,7 +250,12 @@ class Slot(object):
 
         self._executionCount = 0
         self._settingUp = False
-        self._condition = threading.Condition()
+        if self.operator is not None:
+            print(f"{self.operator.name}.{self.name} copying condition")
+            self._condition = self.operator._condition
+        else:
+            print(f"NONAME - {self.name} own condition")
+            self._condition = threading.Condition()
 
         # Allow slots to be sorted by their order of creation for
         # debug output and diagramming purposes.
@@ -924,6 +939,7 @@ class Slot(object):
             # We can't execute while the operator is in the middle of
             # setupOutputs
             with self.operator._condition:
+                write_lineno(f'increment{self.operator._condition}')
                 while self.operator._settingUp:
                     self.operator._condition.wait()
                 self.operator._executionCount += 1
@@ -948,6 +964,7 @@ class Slot(object):
                           "BUG: Can't decrement the execution count below zero!"
                     self.finished = True
                     with self.operator._condition:
+                        write_lineno(f'decrement{self.operator._condition}')
                         self.operator._executionCount -= 1
                         self.operator._condition.notifyAll()
 
