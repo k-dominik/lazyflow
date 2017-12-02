@@ -526,12 +526,14 @@ class Slot(object):
             if upstream_slot is not None:
                 upstream_slot._sig_unready.subscribe( self._handleUpstreamUnready )
                 self._value = None
+
                 if upstream_slot.level == self.level:
-                    assert upstream_slot.stype.isCompatible(type(self.stype)), \
-                        "Can't connect slots of non-matching stypes!" \
-                        f"Tried to connect {self.getRealOperator()} with {upstream_slot.getRealOperator()}." \
-                        " Attempting to connect '{}' (stype: {}) to '{}' (stype: {})".format(
-                            self.name, self.stype, upstream_slot.name, upstream_slot.stype)
+                    assert upstream_slot.stype.isCompatible(type(self.stype)), (
+                        "Can't connect slots of non-matching stypes! "
+                        f"Tried to connect {self.getRealOperator()} with {upstream_slot.getRealOperator()}. "
+                        f"Attempting to connect '{self.name}' (stype: {self.stype}) to "
+                        f"'{upstream_slot.name}' (stype: {upstream_slot.stype})"
+                    )
 
                     self.upstream_slot = upstream_slot
                     notifyReady = (self.upstream_slot.meta._ready and
