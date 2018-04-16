@@ -840,7 +840,7 @@ class OpBaseFilter(Operator):
             channelIndex = len(inputSlot.meta.shape)
 
         self.outputs["Output"].meta.dtype = self.outputDtype
-        p = self.inputs["Input"].partner
+        p = self.inputs["Input"].upstream_slot
         at = copy.copy(inputSlot.meta.axistags)
 
         if at.axisTypeCount(vigra.AxisType.Channels) == 0:
