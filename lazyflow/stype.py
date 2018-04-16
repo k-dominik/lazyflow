@@ -99,6 +99,15 @@ class SlotType( object ):
         return True
 
 
+class ValueSlotType(SlotType):
+    """For now: dummy class to mark image slots to expose in the api
+    """
+    def isCompatible(self, value):
+        warnings.warn("ValueSlotType.isCompatible: FIXME here")
+        return True
+
+
+
 class ArrayLike( SlotType ):
     def allocateDestination( self, roi ):
         # If we do not support masked arrays, ensure that we are not allocating one.
