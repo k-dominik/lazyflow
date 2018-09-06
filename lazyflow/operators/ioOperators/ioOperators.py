@@ -598,15 +598,16 @@ class OpH5WriterBigDataset(Operator):
 
         if datasetName in list(g.keys()):
             del g[datasetName]
-        kwargs = { 'shape' : dataShape, 'dtype' : dtype,
-            'chunks' : self.chunkShape }
+        kwargs = { 'shape' : tuple(int(x) for x in dataShape), 'dtype' : dtype,
+            'chunks' : tuple(int(x) for x in self.chunkShape)}
         if self.CompressionEnabled.value:
-            kwargs['compression'] = 'gzip' # <-- Would be nice to use lzf compression here, but that is h5py-specific.
-            kwargs['compression_opts'] = 1 # <-- Optimize for speed, not disk space.
+            #kwargs['compression'] = 'gzip' # <-- Would be nice to use lzf compression here, but that is h5py-specific.
+            #kwargs['compression_opts'] = 1 # <-- Optimize for speed, not disk space.
+            pass
         self.d=g.create_dataset(datasetName, **kwargs)
 
         if self.Image.meta.drange is not None:
-            self.d.attrs['drange'] = self.Image.meta.drange
+            self.d.attrs['drange'] = tuple(float(x) for x in self.Image.meta.drange)
         if self.Image.meta.display_mode is not None:
             self.d.attrs['display_mode'] = self.Image.meta.display_mode
 
@@ -618,10 +619,8 @@ class OpH5WriterBigDataset(Operator):
 
         def handle_block_result(roi, data):
             slicing = roiToSlice(*roi)
-            if data.flags.c_contiguous:
-                self.d.write_direct(data.view(numpy.ndarray), dest_sel=slicing)
-            else:
-                self.d[slicing] = data
+            self.d[slicing] = data
+
         batch_size = None
         if self.BatchSize.ready():
             batch_size = self.BatchSize.value

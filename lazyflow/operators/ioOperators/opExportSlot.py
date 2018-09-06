@@ -238,6 +238,7 @@ class OpExportSlot(Operator):
             export_func()
     
     def _export_hdf5(self, compress=False):
+        import z5py as h5py
         self.progressSignal( 0 )
 
         # Create and open the hdf5 file
@@ -249,13 +250,16 @@ class OpExportSlot(Operator):
             if ex.errno != 2:
                 raise
         try:
-            with h5py.File(export_components.externalPath, 'w') as hdf5File:
+            tmp = export_components.externalPath.replace('.h5', '.n5')
+            print(tmp)
+            with h5py.File(tmp) as hdf5File:
+                print(f'>>>>>>>>> {hdf5File}')
                 # Create a temporary operator to do the work for us
                 opH5Writer = OpH5WriterBigDataset(parent=self)
                 try:
                     opH5Writer.CompressionEnabled.setValue( compress )
                     opH5Writer.hdf5File.setValue( hdf5File )
-                    opH5Writer.hdf5Path.setValue( export_components.internalPath )
+                    opH5Writer.hdf5Path.setValue( export_components.internalPath.lstrip('/') )
                     opH5Writer.Image.connect( self.Input )
             
                     # The H5 Writer provides it's own progress signal, so just connect ours to it.
@@ -269,7 +273,7 @@ class OpExportSlot(Operator):
         except IOError as ex:
             import sys
             msg = "\nException raised when attempting to export to {}: {}\n"\
-                  .format( export_components.externalPath, str(ex) )
+                  .format( tmp, str(ex) )
             sys.stderr.write(msg)
             raise
 
