@@ -601,8 +601,8 @@ class OpH5WriterBigDataset(Operator):
         kwargs = { 'shape' : tuple(int(x) for x in dataShape), 'dtype' : dtype,
             'chunks' : tuple(int(x) for x in self.chunkShape)}
         if self.CompressionEnabled.value:
-            #kwargs['compression'] = 'gzip' # <-- Would be nice to use lzf compression here, but that is h5py-specific.
-            #kwargs['compression_opts'] = 1 # <-- Optimize for speed, not disk space.
+            kwargs['compression'] = 'gzip' # <-- Would be nice to use lzf compression here, but that is h5py-specific.
+            kwargs['compression_opts'] = 1 # <-- Optimize for speed, not disk space.
             pass
         self.d=g.create_dataset(datasetName, **kwargs)
 
@@ -624,13 +624,13 @@ class OpH5WriterBigDataset(Operator):
         batch_size = None
         if self.BatchSize.ready():
             batch_size = self.BatchSize.value
-        requester = BigRequestStreamer( self.Image, roiFromShape( self.Image.meta.shape ), batchSize=batch_size )
+        requester = BigRequestStreamer( self.Image, roiFromShape( self.Image.meta.shape ), batchSize=batch_size, allowParallelResults=True)
         requester.resultSignal.subscribe( handle_block_result )
         requester.progressSignal.subscribe( self.progressSignal )
         requester.execute()
 
         # Be paranoid: Flush right now.
-        self.f.file.flush()
+        # self.f.file.flush()
 
         # We're finished.
         result[0] = True
