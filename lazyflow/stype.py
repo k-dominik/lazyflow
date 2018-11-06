@@ -106,6 +106,10 @@ class ValueSlotType(SlotType):
         warnings.warn("ValueSlotType.isCompatible: FIXME here")
         return True
 
+    def isConfigured(self):
+        # TODO: should probably be less permissible here.
+        return True
+
 
 
 class ArrayLike( SlotType ):

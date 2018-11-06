@@ -42,7 +42,7 @@ import numpy
 import vigra
 
 #lazyflow
-from lazyflow import rtype
+from lazyflow import rtype, stype
 from lazyflow.roi import TinyVector
 from lazyflow.request import Request
 from lazyflow.stype import ArrayLike
@@ -1234,7 +1234,9 @@ class Slot(object):
                 self._changed()
     
                 # Propagate dirtyness
-                if self.rtype == rtype.List:
+                if isinstance(self.stype, stype.ValueSlotType):
+                    self.setDirty(())
+                elif self.rtype == rtype.List:
                     self.setDirty(())
                 else:
                     self.setDirty(slice(None))
