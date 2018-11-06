@@ -99,19 +99,6 @@ class SlotType( object ):
         return True
 
 
-class ValueSlotType(SlotType):
-    """For now: dummy class to mark image slots to expose in the api
-    """
-    def isCompatible(self, value):
-        warnings.warn("ValueSlotType.isCompatible: FIXME here")
-        return True
-
-    def isConfigured(self):
-        # TODO: should probably be less permissible here.
-        return True
-
-
-
 class ArrayLike( SlotType ):
     def allocateDestination( self, roi ):
         # If we do not support masked arrays, ensure that we are not allocating one.
@@ -291,3 +278,15 @@ class Opaque(SlotType):
     
     def copy_data(self, dst, src):
         raise("Not Implemented")
+
+
+class ValueSlotType(Opaque):
+    """For now: dummy class to mark image slots to expose in the api
+    """
+    def isCompatible(self, value):
+        warnings.warn("ValueSlotType.isCompatible: FIXME here")
+        return True
+
+    def isConfigured(self):
+        # TODO: should probably be less permissible here.
+        return True
