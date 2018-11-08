@@ -28,9 +28,9 @@ class OpValuePiper(Operator):
     description = "simple piping operator for ValueType Slots"
 
     # Inputs
-    Input = InputSlot(stype=stype.ValueSlotType)
+    Input = InputSlot(stype=stype.ValueLike)
     # Outputs
-    Output = OutputSlot(stype=stype.ValueSlotType)
+    Output = OutputSlot(stype=stype.ValueLike)
 
     def setupOutputs(self):
         inputSlot = self.inputs["Input"]

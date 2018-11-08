@@ -1234,7 +1234,7 @@ class Slot(object):
                 self._changed()
     
                 # Propagate dirtyness
-                if isinstance(self.stype, stype.ValueSlotType):
+                if isinstance(self.stype, stype.ValueLike):
                     self.setDirty(())
                 elif self.rtype == rtype.List:
                     self.setDirty(())

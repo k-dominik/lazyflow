@@ -280,11 +280,11 @@ class Opaque(SlotType):
         raise("Not Implemented")
 
 
-class ValueSlotType(Opaque):
+class ValueLike(Opaque):
     """For now: dummy class to mark image slots to expose in the api
     """
     def isCompatible(self, value):
-        warnings.warn("ValueSlotType.isCompatible: FIXME here")
+        warnings.warn("ValueLike.isCompatible: FIXME here")
         return True
 
     def isConfigured(self):
