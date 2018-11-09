@@ -243,11 +243,11 @@ class ArrayLike( SlotType ):
             assert False, "check_result_valid: result type is not supported"
 
 
-class ImageType(ArrayLike):
+class ImageLike(ArrayLike):
     """For now: dummy class to mark image slots to expose in the api
     """
     def isCompatible(self, value):
-        warnings.warn("ImageType.isCompatible: FIXME here")
+        warnings.warn("ImageLike.isCompatible: FIXME here")
         return True
 
 
