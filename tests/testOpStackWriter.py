@@ -38,6 +38,7 @@ import sys
 import logging
 logger = logging.getLogger('tests.testOpStackWriter')
 
+
 class TestOpStackWriter(object):
 
     def setUp(self):
@@ -89,6 +90,34 @@ class TestOpStackWriter(object):
         
         assert opReorderAxes.Output.meta.shape == self.testData.shape, "Exported files were of the wrong shape or number."
         assert (opReorderAxes.Output[:].wait() == self.testData.view( numpy.ndarray )).all(), "Exported data was not correct"
+
+    def test_write_big_stack(self):
+        """write images with more than 2**32 pixels per slice
+
+        https://github.com/ilastik/lazyflow/issues/282
+
+        problem is, that numpy returns int32 per default when
+        handling (new) integers. We've to make sure that when
+        required memory is calculated, we won't overflow.t
+        """
+        dataShape = (2, 5000, 5000)
+        axisorder = 'cyx'
+        testData = numpy.random.randint(0, 256, dataShape).astype(numpy.float32).view(vigra.VigraArray)
+        testData.axistags = vigra.defaultAxistags(axisorder)
+
+        opData = OpBlockedArrayCache(graph=self.graph)
+        opData.BlockShape.setValue(testData.shape)
+        opData.Input.setValue(testData)
+
+        opWriter = OpStackWriter(graph=self.graph)
+        opWriter.FilepathPattern.setValue(self._stack_filepattern)
+        opWriter.Input.connect(opData.Output)
+        # Run the export
+        try:
+            opWriter.run_export()
+        except MemoryError:
+            assert False, "There might be an error with estimation of memory usage!"
+
 
 if __name__ == "__main__":
     # Run this file independently to see debug output.
