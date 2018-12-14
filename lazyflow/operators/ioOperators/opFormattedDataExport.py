@@ -128,7 +128,7 @@ class OpFormattedDataExport(Operator):
 
         if self.RegionStart.ready():
             # RegionStart is permitted to contain 'None' values, which we replace with zeros
-            new_start = [x or 0 for x in self.RegionStart.value]
+            new_start = [x[0] or x[1] for x in zip(self.RegionStart.value, total_roi[0])]
 
         if self.RegionStop.ready():
             # RegionStop is permitted to contain 'None' values, 
