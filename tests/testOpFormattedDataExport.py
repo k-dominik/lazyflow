@@ -98,8 +98,7 @@ class TestOpFormattedDataExport:
             # Also, must promote to signed values to avoid unsigned rollover
             # See issue ( https://github.com/ilastik/lazyflow/issues/165 ).
             expected_data_signed = expected_data.astype(numpy.int16)
-            read_data_signed = expected_data.astype(numpy.int16)
-            difference_from_expected = expected_data_signed - read_data_signed
+            difference_from_expected = expected_data_signed - read_data
             assert (numpy.abs(difference_from_expected) <= 1).all(), "Read data didn't match exported data!"
         finally:
             opRead.cleanUp()
@@ -168,8 +167,7 @@ class TestOpFormattedDataExport:
             # Also, must promote to signed values to avoid unsigned rollover
             # See issue ( https://github.com/ilastik/lazyflow/issues/165 ).
             expected_data_signed = expected_data.astype(numpy.int16)
-            read_data_signed = expected_data.astype(numpy.int16)
-            difference_from_expected = expected_data_signed - read_data_signed
+            difference_from_expected = expected_data_signed - read_data
             assert (numpy.abs(difference_from_expected) <= 1).all(), "Read data didn't match exported data!"
         finally:
             opRead.cleanUp()
