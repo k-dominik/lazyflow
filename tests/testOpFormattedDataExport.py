@@ -38,7 +38,7 @@ class TestOpFormattedDataExport:
     @classmethod
     def setup_class(cls):
         cls._tmpdir = tempfile.mkdtemp()
-        cls.data = numpy.random.random((90, 100)).astype(numpy.float32) * 100
+        cls.data = numpy.random.random((90, 100)).astype(numpy.float) * 100
         cls.data = vigra.taggedView(cls.data, vigra.defaultAxistags('xy'))
 
     def setup_method(self):
@@ -92,7 +92,7 @@ class TestOpFormattedDataExport:
             assert opRead.Output.meta.shape == expected_data.shape
             assert opRead.Output.meta.dtype == expected_data.dtype
             read_data = opRead.Output[:].wait()
-    
+
             # Due to rounding errors, the actual result and the expected result may differ by 1
             #  e.g. if the original pixel value was 32.99999999
             # Also, must promote to signed values to avoid unsigned rollover
@@ -103,9 +103,14 @@ class TestOpFormattedDataExport:
         finally:
             opRead.cleanUp()
 
-    @pytest.mark.parametrize("export_type", ['uint8'])
+    @pytest.mark.parametrize("export_type", [
+        'uint8', 'uint16', 'uint32', 'uint64', 'float32', 'float64', 'int16', 'int32', 'int64'])
     @pytest.mark.parametrize("export_roi", [
-        [(10, 20, None, None, None), (56, 67, None, None, None)]
+        [(10, 20, None, None, None), (56, 67, None, None, None)],
+        [(None, None, None, None, None), (None, None, None, None, None)],
+        [(None, None, None, None, None), (10, 20, None, None, None)],
+        [(10, 30, None, None, None), (None, None, None, None, None)],
+        [(None, None, None, None, None), (100, 200, None, None, None)],
     ])
     def test_subregions(self, export_roi, export_type):
         export_dtype = numpy.dtype(export_type)
@@ -122,6 +127,7 @@ class TestOpFormattedDataExport:
         # assuming axisorder is unchanged
         full_roi_start = [x[0] or x[1] for x in zip(sub_roi[0], (0, 0))]
         full_roi_stop = [x[0] or x[1] for x in zip(sub_roi[1], self.data.shape)]
+        full_roi_stop = [min(x) for x in zip(full_roi_stop, self.data.shape)]
 
         opExport.InputMin.setValue(0.0)
         opExport.InputMax.setValue(100.0)
@@ -155,19 +161,17 @@ class TestOpFormattedDataExport:
 
             # Compare with the correct subregion and convert dtype.
             expected_data = self.data.view(numpy.ndarray)[roiToSlice(full_roi_start, full_roi_stop)]
-            expected_data = expected_data.astype(export_dtype)
-            expected_data += 100  # see renormalization settings
+            expected_data = expected_data + 100  # see renormalization settings
 
             assert opRead.Output.meta.shape == expected_data.shape
-            assert opRead.Output.meta.dtype == expected_data.dtype
+            assert opRead.Output.meta.dtype == export_dtype
             read_data = opRead.Output[:].wait()
 
             # Due to rounding errors, the actual result and the expected result may differ by 1
-            #  e.g. if the original pixel value was 32.99999999
-            # Also, must promote to signed values to avoid unsigned rollover
             # See issue ( https://github.com/ilastik/lazyflow/issues/165 ).
-            expected_data_signed = expected_data.astype(numpy.int16)
-            difference_from_expected = expected_data_signed - read_data
+            difference_from_expected = expected_data - read_data
+            # result of comparison is implicitly promoted to float, since expected_data is float
+            assert difference_from_expected.dtype == numpy.float
             assert (numpy.abs(difference_from_expected) <= 1).all(), "Read data didn't match exported data!"
         finally:
             opRead.cleanUp()
