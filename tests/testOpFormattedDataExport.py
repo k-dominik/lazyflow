@@ -24,6 +24,8 @@ import os
 import tempfile
 import shutil
 
+import pytest
+
 import numpy
 import vigra
 
@@ -91,6 +93,76 @@ class TestOpFormattedDataExport:
             assert opRead.Output.meta.dtype == expected_data.dtype
             read_data = opRead.Output[:].wait()
     
+            # Due to rounding errors, the actual result and the expected result may differ by 1
+            #  e.g. if the original pixel value was 32.99999999
+            # Also, must promote to signed values to avoid unsigned rollover
+            # See issue ( https://github.com/ilastik/lazyflow/issues/165 ).
+            expected_data_signed = expected_data.astype(numpy.int16)
+            read_data_signed = expected_data.astype(numpy.int16)
+            difference_from_expected = expected_data_signed - read_data_signed
+            assert (numpy.abs(difference_from_expected) <= 1).all(), "Read data didn't match exported data!"
+        finally:
+            opRead.cleanUp()
+
+    @pytest.mark.parametrize("export_type", ['uint8'])
+    @pytest.mark.parametrize("export_roi", [
+        [(10, 20, None, None, None), (56, 67, None, None, None)]
+    ])
+    def test_subregions(self, export_roi, export_type):
+        export_dtype = numpy.dtype(export_type)
+        opExport = self.opExport
+        opExport.Input.setValue(self.data)
+        opRead = self.opRead
+
+        sub_roi = export_roi
+        opExport.RegionStart.setValue(sub_roi[0])
+        opExport.RegionStop.setValue(sub_roi[1])
+
+        opExport.ExportDtype.setValue(export_dtype)
+
+        # assuming axisorder is unchanged
+        full_roi_start = [x[0] or x[1] for x in zip(sub_roi[0], (0, 0))]
+        full_roi_stop = [x[0] or x[1] for x in zip(sub_roi[1], self.data.shape)]
+
+        opExport.InputMin.setValue(0.0)
+        opExport.InputMax.setValue(100.0)
+        opExport.ExportMin.setValue(100)
+        opExport.ExportMax.setValue(200)
+
+        opExport.OutputFormat.setValue('hdf5')
+        opExport.OutputFilenameFormat.setValue(
+            self._tmpdir + f'/export_{export_type}_' + 'x{x_start}-{x_stop}_y{y_start}-{y_stop}')
+        opExport.OutputInternalPath.setValue('volume/data')
+
+        opExport.TransactionSlot.setValue(True)
+
+        assert opExport.ImageToExport.ready()
+        assert opExport.ExportPath.ready()
+        assert opExport.ImageToExport.meta.drange == (100, 200)
+
+        expected_path = (
+            f"{self._tmpdir}/export_"
+            f"{export_type}_"
+            f"x{full_roi_start[0]}-{full_roi_stop[0]}_"
+            f"y{full_roi_start[1]}-{full_roi_stop[1]}"
+            ".h5/volume/data"
+        )
+        # print "exporting data to: {}".format( opExport.ExportPath.value )
+        assert opExport.ExportPath.value == expected_path
+        opExport.run_export()
+
+        try:
+            opRead.FilePath.setValue(opExport.ExportPath.value)
+
+            # Compare with the correct subregion and convert dtype.
+            expected_data = self.data.view(numpy.ndarray)[roiToSlice(full_roi_start, full_roi_stop)]
+            expected_data = expected_data.astype(export_dtype)
+            expected_data += 100  # see renormalization settings
+
+            assert opRead.Output.meta.shape == expected_data.shape
+            assert opRead.Output.meta.dtype == expected_data.dtype
+            read_data = opRead.Output[:].wait()
+
             # Due to rounding errors, the actual result and the expected result may differ by 1
             #  e.g. if the original pixel value was 32.99999999
             # Also, must promote to signed values to avoid unsigned rollover
