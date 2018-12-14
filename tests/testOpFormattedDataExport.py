@@ -31,23 +31,27 @@ from lazyflow.graph import Graph
 from lazyflow.roi import roiToSlice
 from lazyflow.operators.ioOperators import OpInputDataReader, OpFormattedDataExport
 
+
 class TestOpFormattedDataExport(object):
-    
     @classmethod
     def setupClass(cls):
         cls._tmpdir = tempfile.mkdtemp()
+        cls.data = numpy.random.random((90, 100)).astype(numpy.float32) * 100
+        cls.data = vigra.taggedView(cls.data, vigra.defaultAxistags('xy'))
+
+    def setUp(self):
+        self.graph = Graph()
+        self.opExport = OpFormattedDataExport(graph=self.graph)
+        self.opRead = OpInputDataReader(graph=self.graph)
 
     @classmethod
     def teardownClass(cls):
-        shutil.rmtree(cls._tmpdir) 
+        shutil.rmtree(cls._tmpdir)
 
     def testBasic(self):
-        graph = Graph()
-        opExport = OpFormattedDataExport(graph=graph)
-        
-        data = numpy.random.random( (100,100) ).astype( numpy.float32 ) * 100
-        data = vigra.taggedView( data, vigra.defaultAxistags('xy') )
-        opExport.Input.setValue(data)
+        opExport = self.opExport
+        opExport.Input.setValue(self.data)
+        opRead = self.opRead
 
         sub_roi = [(10, 0), (None, 80)]
         opExport.RegionStart.setValue( sub_roi[0] )
@@ -71,16 +75,15 @@ class TestOpFormattedDataExport(object):
         assert opExport.ImageToExport.meta.drange == (100,200)
         
         #print "exporting data to: {}".format( opExport.ExportPath.value )
-        assert opExport.ExportPath.value == self._tmpdir + '/' + 'export_x10-100_y0-80.h5/volume/data'
+        assert opExport.ExportPath.value == self._tmpdir + '/' + 'export_x10-90_y0-80.h5/volume/data'
         opExport.run_export()
         
-        opRead = OpInputDataReader( graph=graph )
         try:
             opRead.FilePath.setValue( opExport.ExportPath.value )
     
             # Compare with the correct subregion and convert dtype.
             sub_roi[1] = (100, 80) # Replace 'None' with full extent
-            expected_data = data.view(numpy.ndarray)[roiToSlice(*sub_roi)]
+            expected_data = self.data.view(numpy.ndarray)[roiToSlice(*sub_roi)]
             expected_data = expected_data.astype(numpy.uint8)
             expected_data += 100 # see renormalization settings
     
@@ -98,6 +101,7 @@ class TestOpFormattedDataExport(object):
             assert (numpy.abs(difference_from_expected) <= 1).all(), "Read data didn't match exported data!"
         finally:
             opRead.cleanUp()
+
 
 if __name__ == "__main__":
     import sys
