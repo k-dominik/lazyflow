@@ -32,20 +32,20 @@ from lazyflow.roi import roiToSlice
 from lazyflow.operators.ioOperators import OpInputDataReader, OpFormattedDataExport
 
 
-class TestOpFormattedDataExport(object):
+class TestOpFormattedDataExport:
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls._tmpdir = tempfile.mkdtemp()
         cls.data = numpy.random.random((90, 100)).astype(numpy.float32) * 100
         cls.data = vigra.taggedView(cls.data, vigra.defaultAxistags('xy'))
 
-    def setUp(self):
+    def setup_method(self):
         self.graph = Graph()
         self.opExport = OpFormattedDataExport(graph=self.graph)
         self.opRead = OpInputDataReader(graph=self.graph)
 
     @classmethod
-    def teardownClass(cls):
+    def teardown_class(cls):
         shutil.rmtree(cls._tmpdir)
 
     def testBasic(self):
