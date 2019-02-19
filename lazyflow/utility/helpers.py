@@ -1,7 +1,3 @@
-from builtins import zip
-from builtins import map
-from builtins import range
-from builtins import object
 ###############################################################################
 #   lazyflow: data flow based lazy parallel computation framework
 #
@@ -23,8 +19,10 @@ from builtins import object
 # This information is also available on the ilastik web site at:
 #		   http://ilastik.org/license/
 ###############################################################################
-import os,numpy,itertools,copy
-from lazyflow.roi import TinyVector, roiToSlice
+import os
+import numpy
+import copy
+from lazyflow.roi import TinyVector
 import warnings
 from functools import reduce
 
@@ -109,7 +107,7 @@ def itersubclasses(cls, _seen=None):
 
     >>> list(itersubclasses(int)) == [bool]
     True
-    >>> class A(object): pass
+    >>> class A: pass
     >>> class B(A): pass
     >>> class C(A): pass
     >>> class D(B,C): pass
@@ -197,7 +195,7 @@ def generateRandomRoi(maxShape,minShape = 0,minWidth = 0):
 
 
 
-class newIterator(object):
+class newIterator:
     def __init__(self,roi,srcGrid,trgtGrid,timeIndex = None,channelIndex = None):
         #cast list due to TinyVector being strange
         self.roi = (list(roi.start),list(roi.stop))
@@ -349,7 +347,7 @@ if __name__ == "__main__":
     assert ( nonzero_coord_array(v) == numpy.transpose(v.nonzero()) ).all()
     
     
-    class roi(object):
+    class roi:
         def __init__(self,start,stop):
             self.start = start
             self.stop = stop
