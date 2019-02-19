@@ -28,6 +28,51 @@ from lazyflow.roi import TinyVector, roiToSlice
 import warnings
 from functools import reduce
 
+
+class DtypeConvertFunction:
+    """Data-type conversion and rescaling function class
+
+    Simple callable class that converts between dtypes.
+
+    This class was needed in order to be able to check functions for equality.
+    When using this function as an input for OpPixelOperator.Function, changing
+    the input value will to the same conversion function will not result in
+    dirtyness.
+    """
+    def __init__(self, dtype: numpy.dtype):
+        """
+        Args:
+            dtype (numpy.dtype): dtype to which this functions __call__ will
+              convert.
+        """
+        # When from other libraries, the dtype could also be
+        # numpy.dtype('uint8'), which would not be the same as numpy.uint8
+        assert not isinstance(dtype, numpy.dtype)
+        self._dtype = dtype
+
+        if numpy.dtype(dtype).char in numpy.typecodes['AllInteger']:
+            # For integer dtype scale according to dtype min and max to maximize precision
+            dtype_info = numpy.iinfo(dtype)
+            min_val = dtype_info.min
+            max_val = dtype_info.max
+            self._fun = lambda x: ((max_val - min_val) * x - min_val).astype(dtype)
+        else:
+            # For floating points, just coerce it to the new floating point dtype.
+            self._fun = lambda x: x.astype(dtype)
+
+    def __eq__(self, other):
+        if other is None:
+            return False
+        if not isinstance(other, DtypeConvertFunction):
+            return False
+        if self._dtype == other._dtype:
+            return True
+        return False
+
+    def __call__(self, val):
+        return self._fun(val)
+
+
 def warn_deprecated(msg, stacklevel=0):
     warnings.warn("DEPRECATION WARNING: " + msg,
                   stacklevel=stacklevel+2)
