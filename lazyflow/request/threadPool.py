@@ -21,6 +21,7 @@
 ###############################################################################
 # Built-in
 import atexit
+import queue
 import threading
 import time
 import ctypes
@@ -29,32 +30,23 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-from lazyflow.utility.priorityQueue import PriorityQueue
-
-
 class ThreadPool:
     """
     Manages a set of worker threads and dispatches tasks to them.
     """
 
-    # _DefaultQueueType = FifoQueue
-    # _DefaultQueueType = LifoQueue
-    _DefaultQueueType = PriorityQueue
-
-    def __init__(self, num_workers, queue_type=_DefaultQueueType):
+    def __init__(self, num_workers):
         """
         Constructor.  Starts all workers.
 
         :param num_workers: The number of worker threads to create.
-        :param queue_type: The type of queue to use for prioritizing tasks.  Possible queue types include :py:class:`PriorityQueue`,
-                           :py:class:`FifoQueue`, and :py:class:`LifoQueue`, or any class with ``push()``, ``pop()``, and ``__len__()`` methods.
         """
         self.job_condition = threading.Condition()
-        self.unassigned_tasks = queue_type()
+        self.unassigned_tasks = queue.PriorityQueue()
         # self.memory = MemoryWatcher(self)
         # self.memory.start()
         self.num_workers = num_workers
-        self.workers = self._start_workers(num_workers, queue_type)
+        self.workers = self._start_workers(num_workers)
 
         # ThreadPools automatically stop upon program exit
         atexit.register(self.stop)
@@ -68,7 +60,7 @@ class ThreadPool:
         if hasattr(task, "assigned_worker") and task.assigned_worker is not None:
             task.assigned_worker.wake_up(task)
         else:
-            self.unassigned_tasks.push(task)
+            self.unassigned_tasks.put_nowait(task)
             # Notify all currently waiting workers that there's new work
             self._notify_all_workers()
 
@@ -88,13 +80,13 @@ class ThreadPool:
     def get_states(self):
         return [w.state for w in self.workers]
 
-    def _start_workers(self, num_workers, queue_type):
+    def _start_workers(self, num_workers):
         """
         Start a set of workers and return the set.
         """
         workers = set()
         for i in range(num_workers):
-            w = _Worker(self, i, queue_type=queue_type)
+            w = _Worker(self, i)
             workers.add(w)
             w.start()
         return workers
@@ -114,19 +106,19 @@ class ThreadPool:
         """
         done = False
         while not done:
-            while self.unassigned_tasks:
+            while not self.unassigned_tasks.empty():
                 time.sleep(0.1)
 
             for worker in self.workers:
-                while worker.job_queue:
+                while not worker.job_queue.empty():
                     time.sleep(0.1)
 
             # Second pass: did any of those completing tasks launch new tasks?
             done = True
             for worker in self.workers:
-                if len(worker.job_queue) > 0:
+                if not worker.job_queue.empty():
                     done = False
-            if self.unassigned_tasks:
+            if not self.unassigned_tasks.empty():
                 done = False
 
 
@@ -136,14 +128,14 @@ class _Worker(threading.Thread):
     The loop pops one task from the threadpool and executes it.
     """
 
-    def __init__(self, thread_pool, index, queue_type):
+    def __init__(self, thread_pool, index):
         name = "Worker #{}".format(index)
         super(_Worker, self).__init__(name=name)
         self.daemon = True  # kill automatically on application exit!
         self.thread_pool = thread_pool
         self.stopped = False
         self.job_queue_condition = threading.Condition()
-        self.job_queue = queue_type()
+        self.job_queue = queue.PriorityQueue()
         self.state = "initialized"
 
     def run(self):
@@ -191,7 +183,7 @@ class _Worker(threading.Thread):
         """
         assert task.assigned_worker is self
         with self.job_queue_condition:
-            self.job_queue.push(task)
+            self.job_queue.put_nowait(task)
             self.job_queue_condition.notify()
 
     def _get_next_job(self):
@@ -228,18 +220,17 @@ class _Worker(threading.Thread):
         Return None if neither queue has work to do.
         """
         # Try our own queue first
-        if len(self.job_queue) > 0:
-            return self.job_queue.pop()
-
-        # Otherwise, try to claim a job from the global unassigned list
         try:
-            # task = self.thread_pool.memory.filter(self.thread_pool.unassigned_tasks.pop())
-            task = self.thread_pool.unassigned_tasks.pop()
-        except IndexError:
-            return None
-        else:
-            task.assigned_worker = (
-                self
-            )  # If this fails, then your callable is some built-in that doesn't allow arbitrary
-            #  members (e.g. .assigned_worker) to be "monkey-patched" onto it.  You may have to wrap it in a custom class first.
-            return task
+            return self.job_queue.get_nowait()
+        except queue.Empty:
+            # Otherwise, try to claim a job from the global unassigned list
+            try:
+                task = self.thread_pool.unassigned_tasks.get_nowait()
+            except queue.Empty:
+                return None
+            else:
+                task.assigned_worker = (
+                    self
+                )  # If this fails, then your callable is some built-in that doesn't allow arbitrary
+                #  members (e.g. .assigned_worker) to be "monkey-patched" onto it.  You may have to wrap it in a custom class first.
+                return task
