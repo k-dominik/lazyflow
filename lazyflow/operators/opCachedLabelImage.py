@@ -19,10 +19,12 @@
 # This information is also available on the ilastik web site at:
 # 		   http://ilastik.org/license/
 ###############################################################################
+
+import warnings
+
 from lazyflow.graph import InputSlot, OutputSlot
 from lazyflow.operators import OpCompressedCache, Operator
 from lazyflow.operators.opLabelImage import _OpLabelImage as OpLabelImage
-from lazyflow.utility.helpers import warn_deprecated
 
 
 class _OpCachedLabelImage(Operator):
@@ -106,5 +108,5 @@ class _OpCachedLabelImage(Operator):
 
 class OpCachedLabelImage(_OpCachedLabelImage):
     def __init__(self, *args, **kwargs):
-        warn_deprecated("OpCachedLabelImage is deprecated," " use OpLabelVolume instead", stacklevel=2)
+        warnings.warn("OpCachedLabelImage is deprecated, use OpLabelVolume instead", DeprecationWarning)
         super(OpCachedLabelImage, self).__init__(*args, **kwargs)
