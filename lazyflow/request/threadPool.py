@@ -99,28 +99,6 @@ class ThreadPool:
             with worker.job_queue_condition:
                 worker.job_queue_condition.notify()
 
-    def _wait_for_idle(self):
-        """
-        Useful for testing only.
-        Wait until there are no tasks left in the threadpool.
-        """
-        done = False
-        while not done:
-            while not self.unassigned_tasks.empty():
-                time.sleep(0.1)
-
-            for worker in self.workers:
-                while not worker.job_queue.empty():
-                    time.sleep(0.1)
-
-            # Second pass: did any of those completing tasks launch new tasks?
-            done = True
-            for worker in self.workers:
-                if not worker.job_queue.empty():
-                    done = False
-            if not self.unassigned_tasks.empty():
-                done = False
-
 
 class _Worker(threading.Thread):
     """
