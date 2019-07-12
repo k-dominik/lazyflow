@@ -183,6 +183,8 @@ class Operator(metaclass=OperatorMetaClass):
     description = ""
     category = "lazyflow"
 
+    subclasses = []
+
     @property
     def transaction(self):
         """
@@ -249,6 +251,10 @@ class Operator(metaclass=OperatorMetaClass):
 
         self._debug_text = None
         self._setup_count = 0
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        cls.subclasses.append(cls)
 
     @property
     def children(self):
