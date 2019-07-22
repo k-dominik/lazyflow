@@ -22,9 +22,10 @@
 
 """Utilities for numpy-like indices and shapes.
 
-Partial copy of slicingtools.py from volumina.
+Adapted from "slicingtools.py" in volumina.
 """
 
+import collections.abc
 from typing import Sequence, Tuple, Union
 
 
@@ -32,12 +33,20 @@ def is_bounded(slicing: Union[slice, Sequence[slice]]) -> bool:
     """Do all slices have upper bounds?
 
     Examples:
-        >>> is_bounded((slice(0, 1), slice(2, 3)))
+        >>> is_bounded(slice(None, None))
+        False
+        >>> is_bounded(slice(1, None))
+        False
+        >>> is_bounded(slice(None, 5))
         True
-        >>> is_bounded((slice(0, 1), slice(2, None)))
+        >>> is_bounded(slice(1, 5))
+        True
+        >>> is_bounded(slice(1, 5, 2))
+        True
+        >>> is_bounded((slice(1, 5), slice(6, None)))
         False
     """
-    if isinstance(slicing, slice):
+    if not isinstance(slicing, collections.abc.Sequence):
         slicing = (slicing,)
     return all(sl.stop is not None for sl in slicing)
 
@@ -46,15 +55,33 @@ def slicing2shape(slicing: Union[slice, Sequence[slice]]) -> Tuple[int, ...]:
     """``X[slicing].shape``, where ``X`` is a sufficiently large array with the same number of dimensions.
 
     Raises:
-        ValueError: slice is not bounded
+        ValueError: Some slice is not bounded or not contiguous.
 
     Examples:
-        >>> slicing2shape((slice(0, 5), slice(10, 42)))
-        (5, 32)
+        >>> slicing2shape(())
+        ()
+        >>> slicing2shape(slice(2, 5))
+        (3,)
+        >>> slicing2shape([slice(2, 5), slice(4, 8)])
+        (3, 4)
+        >>> slicing2shape(slice(2, None))  # doctest: +IGNORE_EXCEPTION_DETAIL
+        Traceback (most recent call last):
+          ...
+        ValueError
+        >>> slicing2shape(slice(2, 5, 2))  # doctest: +IGNORE_EXCEPTION_DETAIL
+        Traceback (most recent call last):
+          ...
+        ValueError
     """
-    if isinstance(slicing, slice):
-        slicing = (slicing,)
-    try:
-        return tuple(sl.stop - (sl.start or 0) for sl in slicing)
-    except TypeError:
-        raise ValueError(f"slicing {slicing} is not bounded")
+    items = slicing
+    if not isinstance(slicing, collections.abc.Sequence):
+        items = (slicing,)
+
+    shape = []
+
+    for sl in items:
+        if sl.stop is None or sl.step is not None and sl.step != 1:
+            raise ValueError(f"slicing {slicing} is not bounded or contiguous")
+        shape.append(sl.stop - (sl.start or 0))
+
+    return tuple(shape)
