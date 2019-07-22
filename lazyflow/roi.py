@@ -259,52 +259,71 @@ def sliceToRoi(slicing, shape, *, extendSingleton=True):
         ValueError: slicing is not valid (either by itself or in combination with the given shape)
 
     Examples:
-        >>> sliceToRoi([], ())
-        ([], [])
-        >>> sliceToRoi(1, ())
-        ([], [])
-        >>> sliceToRoi([slice(0, 1), Ellipsis, 2], ())
-        ([], [])
-        >>> sliceToRoi(slice(None), (1,))
-        ([0], [1])
-        >>> sliceToRoi([slice(1, 2), slice(3, 4)], (0, 0))
-        ([0, 0], [1, 1])
-        >>> sliceToRoi(1, (2, 4, 6))
-        ([1, 0, 0], [2, 4, 6])
-        >>> sliceToRoi(slice(None), (2, 4, 6))
-        ([0, 0, 0], [2, 4, 6])
-        >>> sliceToRoi(slice(0, 1), (2, 4, 6))
-        ([0, 0, 0], [1, 4, 6])
-        >>> sliceToRoi([slice(0, 1)], (2, 4, 6))
-        ([0, 0, 0], [1, 4, 6])
-        >>> sliceToRoi([slice(0, 1), 3, 4], (2, 4, 6))
-        ([0, 3, 4], [1, 4, 5])
-        >>> sliceToRoi((slice(0, 1),), (2, 4, 6))
-        ([0, 0, 0], [1, 4, 6])
-        >>> sliceToRoi((slice(0, 1), 3, 4), (2, 4, 6))
-        ([0, 3, 4], [1, 4, 5])
-        >>> sliceToRoi(Ellipsis, (2, 4, 6))
-        ([0, 0, 0], [2, 4, 6])
-        >>> sliceToRoi((0, Ellipsis, 42), (2, 4, 6, 99))
-        ([0, 0, 0, 42], [1, 4, 6, 43])
-        >>> sliceToRoi([0, Ellipsis, 42], (2, 4, 6, 99))
-        ([0, 0, 0, 42], [1, 4, 6, 43])
-        >>> sliceToRoi(1, (2, 4, 6), extendSingleton=False)
-        ([1, 0, 0], [1, 4, 6])
-        >>> sliceToRoi(slice(None), (2, 4, 6), extendSingleton=False)
-        ([0, 0, 0], [2, 4, 6])
-        >>> sliceToRoi(slice(0, 1), (2, 4, 6), extendSingleton=False)
-        ([0, 0, 0], [1, 4, 6])
-        >>> sliceToRoi([slice(0, 1)], (2, 4, 6), extendSingleton=False)
-        ([0, 0, 0], [1, 4, 6])
-        >>> sliceToRoi([slice(0, 1), 3, 4], (2, 4, 6), extendSingleton=False)
-        ([0, 3, 4], [1, 3, 4])
-        >>> sliceToRoi((slice(0, 1),), (2, 4, 6), extendSingleton=False)
-        ([0, 0, 0], [1, 4, 6])
-        >>> sliceToRoi((slice(0, 1), 3, 4), (2, 4, 6), extendSingleton=False)
-        ([0, 3, 4], [1, 3, 4])
-        >>> sliceToRoi(Ellipsis, (2, 4, 6), extendSingleton=False)
-        ([0, 0, 0], [2, 4, 6])
+
+        Point indexing:
+
+            >>> sliceToRoi(1, (7, 8, 9))
+            ([1, 0, 0], [2, 8, 9])
+            >>> sliceToRoi(-1, (7, 8, 9))
+            ([6, 0, 0], [7, 8, 9])
+            >>> sliceToRoi(1, (7, 8, 9), extendSingleton=False)
+            ([1, 0, 0], [1, 8, 9])
+            >>> sliceToRoi(42, (7, 8, 9))  # doctest: +IGNORE_EXCEPTION_DETAIL
+            Traceback (most recent call last):
+              ...
+            ValueError
+
+        Slice indexing:
+
+            >>> sliceToRoi(slice(None, None), (7, 8, 9))
+            ([0, 0, 0], [7, 8, 9])
+            >>> sliceToRoi(slice(2, 5), (7, 8, 9))
+            ([2, 0, 0], [5, 8, 9])
+            >>> sliceToRoi(slice(2, 42), (7, 8, 9))
+            ([2, 0, 0], [7, 8, 9])
+            >>> sliceToRoi(slice(-1, 5), (7, 8, 9))
+            ([6, 0, 0], [5, 8, 9])
+            >>> sliceToRoi(slice(-42, 42), (7, 8, 9))
+            ([0, 0, 0], [7, 8, 9])
+            >>> sliceToRoi(slice(None, None, 2), (7, 8, 9))  # doctest: +IGNORE_EXCEPTION_DETAIL
+            Traceback (most recent call last):
+              ...
+            ValueError
+
+        Multi indexing:
+
+            >>> sliceToRoi((), (7, 8, 9))
+            ([0, 0, 0], [7, 8, 9])
+            >>> sliceToRoi((1,), (7, 8, 9))
+            ([1, 0, 0], [2, 8, 9])
+            >>> sliceToRoi((1, 2), (7, 8, 9))
+            ([1, 2, 0], [2, 3, 9])
+            >>> sliceToRoi([1, 2], (7, 8, 9))
+            ([1, 2, 0], [2, 3, 9])
+            >>> sliceToRoi((slice(2, 5), slice(3, 6), 5), (7, 8, 9))
+            ([2, 3, 5], [5, 6, 6])
+            >>> sliceToRoi((1, 2, 3, 4), (7, 8, 9))  # doctest: +IGNORE_EXCEPTION_DETAIL
+            Traceback (most recent call last):
+              ...
+            ValueError
+
+        Ellipsis indexing:
+
+            >>> sliceToRoi((1, ..., 5), (7, 8, 9))
+            ([1, 0, 5], [2, 8, 6])
+            >>> sliceToRoi((..., slice(2, 5)), (7, 8, 9))
+            ([0, 0, 2], [7, 8, 5])
+            >>> sliceToRoi((..., ...), (7, 8, 9))  # doctest: +IGNORE_EXCEPTION_DETAIL
+            Traceback (most recent call last):
+              ...
+            ValueError
+
+        Zero-dimensional shape:
+
+            >>> sliceToRoi((), ())
+            ([], [])
+            >>> sliceToRoi((1, 2, 3), ())
+            ([], [])
     """
     if not shape:
         return TinyVector(), TinyVector()
