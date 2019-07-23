@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 ###############################################################################
 #   lazyflow: data flow based lazy parallel computation framework
 #
@@ -19,12 +21,15 @@
 # This information is also available on the ilastik web site at:
 # 		   http://ilastik.org/license/
 ###############################################################################
-
+import traceback, os, sys
 import logging
 
 logger = logging.getLogger(__name__)
 
+import lazyflow
+
 from lazyflow.graph import Operator
+from lazyflow.utility.helpers import itersubclasses
 
 from . import generic
 from . import filterOperators
@@ -32,40 +37,14 @@ from . import classifierOperators
 from . import valueProviders
 from . import operators
 
-
-def _unique_subclasses_of(cls):
-    """Get unique sublcasses of a class.
-
-    Args:
-        cls: class with the `subclasses` attribute containing all it's subclasses
-
-    Returns:
-        {subclass_name: subclass} dict
-
-    Raises:
-        ImportError: duplicate subclass names
-    """
-    subs = {}
-    dupes = set()
-
-    for sub in cls.subclasses:
-        name = sub.__name__
-        if name in subs:
-            dupes.add(name)
-        subs[name] = sub
-
-    if dupes:
-        raise ImportError(f"some {cls.__name__} subclasses have identical names: {dupes}")
-
-    return subs
-
-
+ops = itersubclasses(Operator)
 logger.debug("Loading default Operators...")
-subops = _unique_subclasses_of(Operator)
-globals().update(subops)
-logger.debug(" ".join(subops))
-del subops
-
+loaded = ""
+for i, o in enumerate(ops):
+    loaded += o.__name__ + " "
+    globals()[o.__name__] = o
+loaded += os.linesep
+logger.debug(loaded)
 
 from .opSimpleStacker import OpSimpleStacker
 from .opBlockedArrayCache import OpBlockedArrayCache
@@ -82,3 +61,31 @@ from .opReorderAxes import OpReorderAxes
 from .opLabelVolume import OpLabelVolume
 from .opRelabelConsecutive import OpRelabelConsecutive
 from .opPixelFeaturesPresmoothed import OpPixelFeaturesPresmoothed
+
+ops = list(itersubclasses(Operator))
+"""
+dirs = lazyflow.graph.CONFIG.get("Operators","directories", lazyflow.graph.CONFIG_DIR + "operators")
+dirs = dirs.split(",")
+for d in dirs:
+    print "Loading Operators from ", d,"..."
+    d = os.path.expanduser(d.strip())
+    sys.path.append(d)
+    files = os.listdir(d)
+    for f in files:
+        if os.path.isfile(d + "/" + f) and f[-3:] == ".py":
+            try:
+                print "  Processing file", f
+                module = __import__(f[:-2])
+            except Exception, e:
+                traceback.print_exc(file=sys.stdout)
+                pass
+
+    ops2 = list(itersubclasses(Operator))
+
+    newOps = list(set(list(ops2)).difference(set(list(ops))))
+
+    for o in newOps:
+        print "    Adding", o.__name__
+        globals()[o.__name__] = o
+    """
+# sys.stdout.write(os.linesep)
