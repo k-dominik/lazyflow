@@ -80,7 +80,6 @@ def test_callable_executes_in_same_thread(pool):
 def test_generator_executes_in_same_thread(pool):
     gen_stepped = threading.Event()
     test_finished = threading.Event()
-    wait_queue = queue.Queue()
     thread_ids = []
 
     def make_gen():
@@ -98,10 +97,12 @@ def test_generator_executes_in_same_thread(pool):
 
     gen_task = GenTask(make_gen())
 
-    gen_stepped.clear()
+    # Submit an infinite generator task and wait for it to be scheduled.
+    # Now 1 worker is occupied with that task.
     pool.wake_up(gen_task)
     gen_stepped.wait()
 
+    # Task with some ordering that just waits for an event.
     class WaitTask:
         def __init__(self, priority):
             self.priority = priority
@@ -111,21 +112,19 @@ def test_generator_executes_in_same_thread(pool):
 
         def __call__(self):
             test_finished.wait()
-            wait_queue.get()
-            wait_queue.task_done()
 
-    for _i in range(pool.num_workers):
-        wait_queue.put(None)
-
+    # Now all workers are occupied, and 1 of these tasks is not scheduled yet.
     for i in range(pool.num_workers):
         pool.wake_up(WaitTask(i))
 
+    # Force the generator task to take 1 more step.
     gen_stepped.clear()
     pool.wake_up(gen_task)
     gen_stepped.wait()
 
+    # Ensure that both generator invocations have been executed in the same thread.
     assert len(thread_ids) == 2
     assert thread_ids[0] == thread_ids[1]
 
+    # Release tasks that occupy workers, so that the thread pool can stop.
     test_finished.set()
-    wait_queue.join()
