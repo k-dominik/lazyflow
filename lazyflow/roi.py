@@ -357,6 +357,8 @@ def sliceToRoi(slicing, shape, *, extendSingleton=True):
             if idx < 0:
                 idx += dim
             start, stop = idx, idx
+            if extendSingleton:
+                stop += 1
 
         elif isinstance(idx, slice):
             start, stop, step = idx.indices(dim)
@@ -366,7 +368,6 @@ def sliceToRoi(slicing, shape, *, extendSingleton=True):
         else:
             raise ValueError("only integers, slices (`:`) and ellipsis (`...`) are valid indices")
 
-        stop += extendSingleton and start == stop
         roi_start.append(start)
         roi_stop.append(stop)
 
