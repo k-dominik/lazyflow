@@ -5,7 +5,6 @@ environment:
   # set miniconda version explicitly
   MINICONDA: C:\Miniconda37-x64
   IlASTIK_ROOT: C:\ilastik
-  PYTHONDONTWRITEBYTECODE: 1
 
 install:
   - set "PATH=%MINICONDA%;%MINICONDA%\Scripts;%MINICONDA%\Library\bin;%PATH%
@@ -40,5 +39,5 @@ test_script:
       --capture=no
       --junitxml=nosetests.lazyflow.xml
 
-# on_finish:
-#  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+on_finish:
+ - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
