@@ -30,6 +30,8 @@ install:
     -p ilastik-dependencies-no-solvers pytest-cov coveralls black
     -c ilastik-forge conda-forge defaults
 
+  - conda remove -n %ENV_NAME% --force ilastik-meta
+
 build: off
 
 test_script:
