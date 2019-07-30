@@ -226,9 +226,9 @@ class JsonConfigParser(object):
     ... }
     ... \"""
     >>> import os, tempfile
-    >>> configFile = tempfile.NamedTemporaryFile(delete=False)
-    >>> with open(configFile.name, 'w') as f:
-    ...     _ = f.write(example_file_str)
+    >>> configFile = tempfile.NamedTemporaryFile(mode='w', delete=False)
+    >>> _ = configFile.write(example_file_str)
+    >>> configFile.close()
     >>>
     >>> # Create a parser that understands your schema
     >>> parser = JsonConfigParser( SchemaFields )
