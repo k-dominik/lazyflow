@@ -428,7 +428,7 @@ def nonzero_bounding_box(data):
         >>> data = numpy.zeros( (10,100,100) )
         >>> data[4, 30:40, 50:60] = 1
         >>> data[7, 45:55, 30:35] = 255
-        >>> nonzero_bounding_box(data)
+        >>> nonzero_bounding_box(data).astype("int")
         array([[ 4, 30, 30],
                [ 8, 55, 60]])
 
