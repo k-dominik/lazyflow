@@ -24,12 +24,17 @@ install:
   - timeout 10
   - cd %ILASTIK_ROOT%\ilastik-meta
   - >
-    conda create -n %ENV_NAME%
-    -c ilastik-forge -c conda-forge -c defaults
-    ilastik-dependencies-no-solvers
-    pytest-cov
-    coveralls
-    black
+    python ilastik/scripts/devenv.py create -n %ENV_NAME%
+    -p ilastik-dependencies-no-solvers pytest-cov coveralls black
+    -c ilastik-forge conda-forge defaults
+    --location
+  # - >
+  #   conda create -n %ENV_NAME%
+  #   -c ilastik-forge -c conda-forge -c defaults
+  #   ilastik-dependencies-no-solvers
+  #   pytest-cov
+  #   coveralls
+  #   black
 
 build: off
 
