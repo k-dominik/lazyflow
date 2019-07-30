@@ -46,9 +46,9 @@ test_script:
   - activate %ENV_NAME%
   - cd %ILASTIK_ROOT%\ilastik-meta\lazyflow
   - >
-      pytest
+      python -m pytest
       --capture=no
       --junitxml=nosetests.lazyflow.xml
 
-on_finish:
- - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+# on_finish:
+#  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
