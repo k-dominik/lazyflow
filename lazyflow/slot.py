@@ -1108,7 +1108,6 @@ class Slot(object):
                             # in which case we assume the values are different
                             same = False
 
-                        assert isinstance(same, bool)
                     changed = not same
 
             if changed:
