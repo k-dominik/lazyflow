@@ -335,7 +335,7 @@ class TikTorchLazyflowClassifier(LazyflowPixelwiseClassifierABC):
         logger.debug("Deserializing from {}".format(filename))
 
         with tempfile.TemporaryFile() as f:
-            f.write(h5py_group["classifier"].value)
+            f.write(h5py_group["classifier"][()])
             f.seek(0)
             loaded_pytorch_net = TikTorch.unserialize(f)
 
