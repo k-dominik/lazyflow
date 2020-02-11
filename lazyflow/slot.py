@@ -1102,13 +1102,13 @@ class Slot(object):
                     same = value is self._value
                     if not same:
                         try:
-                            same = value == self._value
+                            same = numpy.array_equal(value, self._value)
                         except ValueError:
                             # Some values can't be compared with __eq__,
                             # in which case we assume the values are different
                             same = False
-                        if isinstance(same, (numpy.ndarray, TinyVector)):
-                            same = same.all()
+
+                        assert isinstance(same, bool)
                     changed = not same
 
             if changed:
