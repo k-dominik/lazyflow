@@ -40,8 +40,8 @@ class OpSimpleBlockedArrayCache(OpUnblockedArrayCache):
         ram_per_pixel = 0
         if self.Input.meta.dtype == object or self.Input.meta.dtype == numpy.object_:
             ram_per_pixel = sys.getsizeof(None)
-        elif numpy.issubdtype(self.Input.meta.dtype, numpy.dtype):
-            ram_per_pixel = self.Input.meta.dtype().nbytes
+        elif numpy.issubdtype(self.Input.meta.dtype, numpy.generic):
+            ram_per_pixel = numpy.dtype(self.Input.meta.dtype).itemsize
 
         # One 'pixel' includes all channels
         tagged_shape = self.Input.meta.getTaggedShape()
