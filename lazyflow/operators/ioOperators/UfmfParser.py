@@ -135,7 +135,7 @@ class UfmfParser(object):
                 xmin, ymin = intup
 
                 buf = fd.read(chunkimsize)
-                bufim = numpy.fromstring(buf, dtype=numpy.uint8)
+                bufim = numpy.frombuffer(buf, dtype=numpy.uint8)
                 bufim.shape = chunkheight, chunkwidth
                 regions.append((xmin, ymin, bufim))
 
@@ -215,7 +215,7 @@ def _read_array(fd, buf_remaining):
     n_bytes, = struct.unpack("<L", n_bytes_buf)
 
     data_buf, buf_remaining = _read_min_chars(fd, n_bytes, buf_remaining)
-    larr = np.fromstring(data_buf, dtype=dtype_char)
+    larr = np.frombuffer(data_buf, dtype=dtype_char)
     return larr, buf_remaining
 
 
@@ -305,7 +305,7 @@ class UfmfV1(UfmfBase):
         (self._version, self._image_radius, self._timestamp0, self._width, self._height) = intup
         # extract background
         bg_im_buf = self._fd.read(self._width * self._height)
-        self._bg_im = numpy.fromstring(bg_im_buf, dtype=numpy.uint8)
+        self._bg_im = numpy.frombuffer(bg_im_buf, dtype=numpy.uint8)
         self._bg_im.shape = self._height, self._width
         if hasattr(self, "handle_bg"):
             self.handle_bg(self._timestamp0, self._bg_im)
@@ -399,7 +399,7 @@ class UfmfV1(UfmfBase):
                     read_length = chunkwidth * chunkheight
                     bufshape = chunkheight, chunkwidth
                 buf = self._fd.read(read_length)
-                bufim = numpy.fromstring(buf, dtype=numpy.uint8)
+                bufim = numpy.frombuffer(buf, dtype=numpy.uint8)
                 bufim.shape = bufshape
                 regions.append((xmin, ymin, bufim))
             yield timestamp, regions
@@ -456,13 +456,13 @@ class _UFmfV3LowLevelReader(object):
         if self._coding == b"rgb24":
             read_len = width * height * sz * self._bytesperpixel
             buf = self._fd_read(read_len)
-            frame = np.fromstring(buf, dtype=dtype)
+            frame = np.frombuffer(buf, dtype=dtype)
             frame.shape = (3, height, width)
             frame = frame.transpose((1, 2, 0))
         elif self._coding == b"mono8":
             read_len = width * height * sz
             buf = self._fd_read(read_len)
-            frame = np.fromstring(buf, dtype=dtype)
+            frame = np.frombuffer(buf, dtype=dtype)
             frame.shape = (height, width)
         else:
             raise NotImplementedError("Color coding %s not yet implemented" % self._coding)
@@ -488,13 +488,13 @@ class _UFmfV3LowLevelReader(object):
             if self._coding == b"rgb24":
                 lenbuf = w * h * self._bytesperpixel
                 buf = self._fd_read(lenbuf)
-                im = np.fromstring(buf, dtype=np.uint8)
+                im = np.frombuffer(buf, dtype=np.uint8)
                 im.shape = (self._bytesperpixel, h, w)
                 im = im.transpose((1, 2, 0))
             elif self._coding == b"mono8":
                 lenbuf = w * h
                 buf = self._fd_read(lenbuf)
-                im = np.fromstring(buf, dtype=np.uint8)
+                im = np.frombuffer(buf, dtype=np.uint8)
                 im.shape = (h, w)
             else:
                 raise NotImplementedError("Color coding %s not yet implemented" % self._coding)
@@ -551,13 +551,13 @@ class _UFmfV4LowLevelReader(_UFmfV3LowLevelReader):
             # all pixel values.
             lenbuf = n_pts * self._points2_sz
             buf = self._fd_read(lenbuf)
-            locs = np.fromstring(buf, dtype=np.uint16)
+            locs = np.frombuffer(buf, dtype=np.uint16)
             locs.shape = (2, n_pts)
             # the pixel values are indexed by box number, followed by
             # column, followed by row, followed by color
             lenbuf = n_pts * self._w * self._h * self._bytesperpixel
             buf = self._fd_read(lenbuf)
-            im = np.fromstring(buf, dtype=np.uint8)
+            im = np.frombuffer(buf, dtype=np.uint8)
             im.shape = (self._bytesperpixel, self._h, self._w, n_pts)
             im = im.transpose(1, 2, 0, 3)
             # if we need regions to be backwards compatible, we
@@ -579,13 +579,13 @@ class _UFmfV4LowLevelReader(_UFmfV3LowLevelReader):
                 if self._coding == b"rgb24":
                     lenbuf = w * h * self._bytesperpixel
                     buf = self._fd_read(lenbuf)
-                    im = np.fromstring(buf, dtype=np.uint8)
+                    im = np.frombuffer(buf, dtype=np.uint8)
                     im.shape = (self._bytesperpixel, h, w)
                     im = im.transpose((1, 2, 0))
                 elif self._coding == b"mono8":
                     lenbuf = w * h
                     buf = self._fd_read(lenbuf)
-                    im = np.fromstring(buf, dtype=np.uint8)
+                    im = np.frombuffer(buf, dtype=np.uint8)
                     im.shape = (h, w)
                 else:
                     raise NotImplementedError("Color coding %s not yet implemented" % self._coding)
